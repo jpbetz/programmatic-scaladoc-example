@@ -73,21 +73,21 @@ Then convert the body and all the inline and block classes it’s made up of to 
 
 Given a class like:
 
-  /**
-   * Fortunes Resource.
-   */
-  class SampleResource {
-  
     /**
-     * Get method.
-     * @param param1 provides a string
-     * @param param2 provides a <b>boolean</b>
-     * @return another string
+     * Fortunes Resource.
      */
-    def get(param1: String, param2: Boolean): String = {
-      "test"
+    class SampleResource {
+  
+      /**
+       * Get method.
+       * @param param1 provides a string
+       * @param param2 provides a <b>boolean</b>
+       * @return another string
+       */
+      def get(param1: String, param2: Boolean): String = {
+        "test"
+      }
     }
-  }
 
 Here’s the output:
 
