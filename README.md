@@ -1,4 +1,5 @@
-== Programmatic Scaladoc API, by Example ==
+"Programmatic API" for Scaladoc, by Example
+-------------------------------------
 
 For rest.li, we needed to extract scaladoc strings from scala source files representing REST resources and add the doc strings to the JSON representation of a REST interface.  We had already done the same for Java using Javadoc’s programmatic APIs.
 
@@ -97,4 +98,4 @@ Here’s the output of our scaladoc extractor:
     paramDoc: <p>provides a string</p>
     paramDoc: <p>provides a <b>boolean</b></p>  
 
-Keep in mind that direct access to the scala AST like we do here means that as the scala compiler changes, so to will the code to traverse the AST and convert a comment to a string.  This program works for scala-compiler 2.9.2 but does not work with scala-compiler 2.10.x.
+I put "Programmatic API" in quotes in the title of this page because directly accessing the AST like we do here means that as the scala compiler changes, so to will the code to traverse the AST and convert a comment to a string.  This program works for scala-compiler 2.9.2 but does not work with scala-compiler 2.10.x.
