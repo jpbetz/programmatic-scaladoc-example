@@ -6,12 +6,9 @@ import tools.nsc.doc.{DocFactory, Settings}
 import tools.nsc.reporters.ConsoleReporter
 import com.sample.scaladoc.SampleResource
 
-
 object ScaladocDocsProvider {
   def main(args: Array[String]) {
-    val provider = new ScaladocDocsProvider(List(
-      "/Users/jbetz/projects/scaladoc-test/src/main/scala/com/sample/scaladoc/SampleResource.scala"
-    ))
+    val provider = new ScaladocDocsProvider(args.toList)
 
     val method = classOf[SampleResource].getMethod("get", classOf[java.lang.String], classOf[Boolean])
     println("classDoc: " + provider.getClassDoc(classOf[SampleResource]))
@@ -24,18 +21,19 @@ object ScaladocDocsProvider {
 /**
  * Scaladoc version of DocProvider.
  */
-class ScaladocDocsProvider(files: List[String]) extends DocsProvider {
+class ScaladocDocsProvider(scalaSourceFiles: List[String]) extends DocsProvider {
 
-  private val root: Option[DocTemplateEntity] = {
-    if(files.size == 0) {
+  private val root = extractScaladoc(scalaSourceFiles)
+
+  def extractScaladoc(scalaSourceFiles: List[String]): Option[DocTemplateEntity] = {
+    if(scalaSourceFiles.size == 0) {
       None
     } else {
       val settings = new Settings(error => print(error))
       settings.usejavacp.value = true
       val reporter = new ConsoleReporter(settings)
       val docFactory = new DocFactory(reporter, settings)
-      val filelist = if (files == null || files.size == 0) List() else collectionAsScalaIterable(files).toList
-      val universe = docFactory.makeUniverse(filelist)
+      val universe = docFactory.makeUniverse(scalaSourceFiles)
       universe.map(_.rootPackage.asInstanceOf[DocTemplateEntity])
     }
   }
@@ -91,7 +89,7 @@ class ScaladocDocsProvider(files: List[String]) extends DocsProvider {
     }
 
     root flatMap { r =>
-      findAtPath(r, resourceClass.getCanonicalName.split("\\.").toList)
+      findAtPath(r, resourceClass.getCanonicalName.split('.').toList)
     }
   }
 
