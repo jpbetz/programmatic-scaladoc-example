@@ -1,17 +1,14 @@
-Programmatic access to Scaladoc.
+== Programmatic Scaladoc API, by Example ==
 
 For rest.li, we needed to extract scaladoc strings from scala source files representing REST resources and add the doc strings to the JSON representation of a REST interface.  We had already done the same for Java using Javadoc’s programmatic APIs.
 
-For Scaladoc programmatic APIs, there wasn’t a whole lot of information available.  A short section from the Scaladoc 2 wiki stated that Scaladoc 2 provides “A new API for writing programs that explore Scala libraries or systems at the API level”.
+For Scaladoc programmatic APIs, there wasn’t a whole lot of information available.  A short section from the [Scaladoc 2 wiki](https://wiki.scala-lang.org/display/SW/Scaladoc) stated that Scaladoc 2 provides “A new API for writing programs that explore Scala libraries or systems at the API level”.
 
-We dug in a bit and found that Scala’s “New Scala Compiler” (nsc) is there this API resides.  So we added a dependency to “org.scala-lang:scala-compiler:2.9.2” to give it a try.
+Scaladoc 2 is part of the “New Scala Compiler” (nsc).  So we added a dependency to “org.scala-lang:scala-compiler:2.9.2” to give it a try.
 
-tools.nsc.doc.DocFactory appeared to be the right starting point.  It uses a “simplified compiler instance” and that “a documentation model is extracted from the post-compilation symbol table”.
+tools.nsc.doc.DocFactory appeared to be the right starting point.  It uses a “simplified compiler instance” and when it's run “...a documentation model is extracted from the post-compilation symbol table”.  Okay, that sounds like what we need.  To build a DocFactory, we need to set a few things up.  Here’s a basic setup:
 
-Okay, to build a DocFactory, we need to set a few things up.  Here’s a basic setup:
-
-
-    val extractScaladoc(files: String[]): Option[DocTemplateEntity] = {
+    val extractScaladoc(files: List[String]): Option[DocTemplateEntity] = {
       val settings = new Settings(error => print(error))            
       settings.usejavacp.value = true
       val reporter = new ConsoleReporter(settings)
@@ -21,9 +18,9 @@ Okay, to build a DocFactory, we need to set a few things up.  Here’s a basic s
       universe.map(_.rootPackage.asInstanceOf[DocTemplateEntity])
     }
 
-We also called the makeUniverse method and then return the root DocTemplateEntity, if one exists.
+There are few things going on here that might need to be customized for any particular use, but basically this configuration takes a list of scala source files, reuses the classpath from the running jvm (usejavacp) and redirects all errors and such to stdout.  The call to makeUniverse method returns the root DocTemplateEntity, if one exists.
 
-DocTemplateEntity is the root of a model representation of the scala source files we’re extracting Scaladoc from.  To get to scaladoc comments, we need to first traverse down to the class, object or trait we want to get documentation for.  We wrote up a function that does the traverse:
+DocTemplateEntity is the root of a model representation of the scala source files we’re extracting Scaladoc from,  looks like this is the root of the AST of the parsed scala code.  To get to scaladoc comments, we need to first traverse down through the AST to whatever entities we want to get documentation for.  Here's a function that does the traverse:
 
     def findAtPath(docTemplate: DocTemplateEntity, pathToEntity: List[String]): Option[DocTemplateEntity] = {
       pathToEntity match {
@@ -31,15 +28,17 @@ DocTemplateEntity is the root of a model representation of the scala source file
         case pathPart :: Nil => docTemplate.templates.find(_.name == pathPart)
         case pathPart:: remainingPathPart => {
           docTemplate.templates.find(_.name == pathPart) match {
-        case Some(childDocTemplate) => findAtPath(childDocTemplate, remainingPathPart)
-        case None => None
+            case Some(childDocTemplate) => findAtPath(childDocTemplate, remainingPathPart)
+            case None => None
+          }
+        }
       }
     }
 
 Now, if we have a classname we can get to it’s scaladoc model:
 
     val root = extractScaladoc(scalaSourceFiles)
-    val classScaladocModel = findAtPath(root, someClass.getCanonicalName.split("\\.").toList)
+    val classScaladocModel = findAtPath(root, someClass.getCanonicalName.split('.').toList)
 
 And then we access the model to get it’s scaladoc comment, and do what we want with it:
 
@@ -71,7 +70,9 @@ Then convert the body and all the inline and block classes it’s made up of to 
       // … handle all the other Inline case classes 
     }
 
-Given a class like:
+And that's it.  Check out the source code to see the entire program.
+
+Let's try it out.  Here's a scala source file:
 
     /**
      * Fortunes Resource.
@@ -89,9 +90,11 @@ Given a class like:
       }
     }
 
-Here’s the output:
+Here’s the output of our scaladoc extractor:
 
     classDoc: <p>Fortunes Resource.</p>
     methodDoc: <p>Get method.</p>
     paramDoc: <p>provides a string</p>
     paramDoc: <p>provides a <b>boolean</b></p>  
+
+Keep in mind that direct access to the scala AST like we do here means that as the scala compiler changes, so to will the code to traverse the AST and convert a comment to a string.  This program works for scala-compiler 2.9.2 but does not work with scala-compiler 2.10.x.
